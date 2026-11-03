@@ -16,6 +16,9 @@ const auditController = require('./controllers/auditController');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CRITICAL: Trust reverse proxy (Render, AWS, Nginx) so HTTPS and client IPs are resolved correctly
+app.set('trust proxy', 1);
+
 // 1. Security Headers
 app.use(
   helmet({
@@ -23,8 +26,8 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
         imgSrc: ["'self'", "data:"],
         connectSrc: ["'self'"]
       }

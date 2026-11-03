@@ -3,6 +3,16 @@ let currentUser = null;
 let currentSelectedDocId = null;
 let allSystemUsers = [];
 
+// Helper to make API requests with Bearer Token + Cookies
+function apiFetch(url, options = {}) {
+  const token = localStorage.getItem('trustvault_token');
+  const headers = { ...(options.headers || {}) };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return fetch(url, { ...options, headers });
+}
+
 // Initialize app on page load
 document.addEventListener('DOMContentLoaded', () => {
   checkSession();
@@ -11,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 1. Session & Auth Check
 async function checkSession() {
   try {
-    const res = await fetch('/api/auth/me');
+    const res = await apiFetch('/api/auth/me');
     if (res.ok) {
       const data = await res.json();
       currentUser = data.user;
@@ -26,12 +36,14 @@ async function checkSession() {
   } catch (err) {
     currentUser = null;
     renderNavbar();
+    openModal('modal-auth');
   }
 }
 
 // Quick Login for Evaluator
 async function quickLogin(email) {
   try {
+    showAlert(`Authenticating as ${email}...`, 'info');
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -40,6 +52,9 @@ async function quickLogin(email) {
 
     const data = await res.json();
     if (res.ok) {
+      if (data.token) {
+        localStorage.setItem('trustvault_token', data.token);
+      }
       currentUser = data.user;
       closeModal('modal-auth');
       renderNavbar();
@@ -50,7 +65,7 @@ async function quickLogin(email) {
       showAlert(data.error || 'Failed to login', 'error');
     }
   } catch (err) {
-    showAlert('Network error during quick login', 'error');
+    showAlert('Network error during quick login: ' + err.message, 'error');
   }
 }
 
@@ -61,6 +76,7 @@ async function handleAuthSubmit(e) {
   const password = document.getElementById('auth-password').value;
 
   try {
+    showAlert('Verifying credentials...', 'info');
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -68,6 +84,9 @@ async function handleAuthSubmit(e) {
     });
     const data = await res.json();
     if (res.ok) {
+      if (data.token) {
+        localStorage.setItem('trustvault_token', data.token);
+      }
       currentUser = data.user;
       closeModal('modal-auth');
       renderNavbar();
@@ -75,24 +94,23 @@ async function handleAuthSubmit(e) {
       showAlert(`Welcome back, ${data.user.name}!`, 'success');
       switchTab('documents');
     } else {
-      showAlert(data.error || 'Invalid credentials', 'error');
+      showAlert(data.error || 'Invalid email or password', 'error');
     }
   } catch (err) {
-    showAlert('Server unreachable', 'error');
+    showAlert('Server unreachable. Please check connection.', 'error');
   }
 }
 
 // Sign Out
 async function logout() {
   try {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    currentUser = null;
-    renderNavbar();
-    showAlert('Signed out successfully.', 'info');
-    openModal('modal-auth');
-  } catch (err) {
-    location.reload();
-  }
+    await apiFetch('/api/auth/logout', { method: 'POST' });
+  } catch (err) {}
+  localStorage.removeItem('trustvault_token');
+  currentUser = null;
+  renderNavbar();
+  showAlert('Signed out successfully.', 'info');
+  openModal('modal-auth');
 }
 
 // Render Header & User Info
@@ -187,7 +205,7 @@ async function loadDocuments() {
     if (search) query.append('search', search);
     if (category) query.append('category', category);
 
-    const res = await fetch(`/api/documents?${query.toString()}`);
+    const res = await apiFetch(`/api/documents?${query.toString()}`);
     if (!res.ok) {
       container.innerHTML = `<div class="col-span-full py-8 text-center text-red-500 text-sm">Failed to fetch documents.</div>`;
       return;
@@ -271,7 +289,7 @@ async function loadDocuments() {
 // 3. Download Document (Dynamic Auth Check)
 async function downloadDoc(docId, filename) {
   try {
-    const res = await fetch(`/api/documents/${docId}/download`);
+    const res = await apiFetch(`/api/documents/${docId}/download`);
 
     if (res.status === 403) {
       showAlert('Access Denied (403): You do not have permission to download this file. Event logged to Audit Trail.', 'error');
@@ -332,8 +350,13 @@ async function handleUpload(e) {
   submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Encrypting & Storing...';
 
   try {
+    const token = localStorage.getItem('trustvault_token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch('/api/documents/upload', {
       method: 'POST',
+      headers,
       body: formData
     });
 
@@ -361,7 +384,7 @@ async function deleteDoc(docId, title) {
   }
 
   try {
-    const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/documents/${docId}`, { method: 'DELETE' });
     const data = await res.json();
     if (res.ok) {
       showAlert('Document permanently deleted from vault.', 'success');
@@ -377,7 +400,7 @@ async function deleteDoc(docId, title) {
 // 6. Permissions Management & Immediate Revocation
 async function loadSystemUsers() {
   try {
-    const res = await fetch('/api/auth/users');
+    const res = await apiFetch('/api/auth/users');
     if (res.ok) {
       const data = await res.json();
       allSystemUsers = data.users || [];
@@ -409,7 +432,7 @@ async function loadActivePermissions(docId) {
   container.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">Loading grants...</p>`;
 
   try {
-    const res = await fetch(`/api/documents/${docId}/permissions`);
+    const res = await apiFetch(`/api/documents/${docId}/permissions`);
     if (!res.ok) {
       container.innerHTML = `<p class="text-xs text-red-500 py-3 text-center">Unable to load permissions.</p>`;
       return;
@@ -453,7 +476,7 @@ async function submitGrantPermission() {
   }
 
   try {
-    const res = await fetch(`/api/documents/${currentSelectedDocId}/permissions`, {
+    const res = await apiFetch(`/api/documents/${currentSelectedDocId}/permissions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -480,7 +503,7 @@ async function revokePermission(userId, userName) {
   }
 
   try {
-    const res = await fetch(`/api/documents/${currentSelectedDocId}/permissions/${userId}`, {
+    const res = await apiFetch(`/api/documents/${currentSelectedDocId}/permissions/${userId}`, {
       method: 'DELETE'
     });
 
@@ -504,7 +527,7 @@ async function viewDocAudit(docId, title) {
   openModal('modal-doc-audit');
 
   try {
-    const res = await fetch(`/api/audit/document/${docId}`);
+    const res = await apiFetch(`/api/audit/document/${docId}`);
     if (!res.ok) {
       container.innerHTML = `<p class="text-xs text-red-500 py-4 text-center">Unable to load audit logs.</p>`;
       return;
@@ -549,7 +572,7 @@ async function loadAuditLogs() {
     const query = new URLSearchParams();
     if (statusFilter) query.append('status', statusFilter);
 
-    const res = await fetch(`/api/audit?${query.toString()}`);
+    const res = await apiFetch(`/api/audit?${query.toString()}`);
     if (!res.ok) {
       tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-red-500">Failed to load audit logs.</td></tr>`;
       return;
@@ -600,7 +623,7 @@ async function verifyAuditIntegrity() {
   showAlert('Running SHA-256 hash chain verification across all blocks...', 'info');
 
   try {
-    const res = await fetch('/api/audit/verify');
+    const res = await apiFetch('/api/audit/verify');
     const data = await res.json();
 
     if (res.ok && data.verified) {
