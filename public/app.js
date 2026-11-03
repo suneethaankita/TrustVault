@@ -666,11 +666,13 @@ function hideAlert() {
 }
 
 function openModal(id) {
-  document.getElementById(id).classList.remove('hidden');
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'flex';
 }
 
 function closeModal(id) {
-  document.getElementById(id).classList.add('hidden');
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
 }
 
 function formatBytes(bytes, decimals = 1) {
