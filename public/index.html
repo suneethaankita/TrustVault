@@ -278,12 +278,39 @@
   <!-- MODAL: SIGN IN / SIGN UP -->
   <div id="modal-auth" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200">
-      <div class="text-center mb-6">
+      <div class="text-center mb-5">
         <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-2xl shadow-lg mb-3">
           <i class="fa-solid fa-lock"></i>
         </div>
         <h2 class="text-xl font-bold text-slate-900">Sign In to TrustVault</h2>
         <p class="text-xs text-slate-500 mt-1">Enterprise Grade Secure Document Storage</p>
+      </div>
+
+      <!-- Quick 1-Tap Demo Logins -->
+      <div class="mb-5 p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-indigo-900 mb-2.5 text-center flex items-center justify-center gap-1">
+          <i class="fa-solid fa-bolt text-amber-500"></i> Tap Any Account to Enter
+        </p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button type="button" onclick="quickLogin('owner@trustvault.com')" class="py-2.5 px-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-user-pen"></i> Alice (Owner)
+          </button>
+          <button type="button" onclick="quickLogin('admin@trustvault.com')" class="py-2.5 px-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-user-shield"></i> Security Admin
+          </button>
+          <button type="button" onclick="quickLogin('viewer@trustvault.com')" class="py-2.5 px-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-user-check"></i> Bob (Viewer)
+          </button>
+          <button type="button" onclick="quickLogin('outsider@trustvault.com')" class="py-2.5 px-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-user-xmark"></i> Charlie (Outsider)
+          </button>
+        </div>
+      </div>
+
+      <div class="relative flex py-2 items-center mb-2">
+        <div class="flex-grow border-t border-slate-200"></div>
+        <span class="flex-shrink mx-3 text-[10px] text-slate-400 uppercase font-semibold">Or type credentials manually</span>
+        <div class="flex-grow border-t border-slate-200"></div>
       </div>
 
       <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">

@@ -42,7 +42,9 @@ if (!access.authorized) {
 
 ### 3. Tamper-Evident SHA-256 Audit Blockchain
 Every action and **DENIED ATTEMPT** is recorded into `audit_logs` with cryptographic chaining:
-$$\text{entry\_hash} = \text{SHA-256}(\text{previous\_hash} + \text{timestamp} + \text{actor} + \text{action} + \text{status} + \text{details})$$
+```text
+entry_hash = SHA-256(previous_hash + timestamp + actor + action + status + details)
+```
 - Evaluators can click **"Verify Cryptographic Integrity"** in the Admin panel (or call `GET /api/audit/verify`) to verify the entire chain from genesis.
 - If any database row is altered, edited, or deleted, the verification engine detects the break and pinpoints the exact compromised record.
 
@@ -56,7 +58,7 @@ $$\text{entry\_hash} = \text{SHA-256}(\text{previous\_hash} + \text{timestamp} +
 
 ### Step 1: Install Dependencies
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/suneethaankita/TrustVault.git
 cd TrustVault
 npm install
 ```
