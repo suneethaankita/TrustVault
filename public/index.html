@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrustVault — Secure Document Sharing & Tamper-Evident Audit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .badge-admin { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+    .badge-owner { background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .badge-viewer { background-color: #e0e7ff; color: #3730a3; border: 1px solid #818cf8; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col">
+
+  <!-- TOP EVALUATION DEMO BANNER -->
+  <div class="bg-indigo-950 text-white text-xs px-4 py-2 flex flex-wrap items-center justify-between gap-2 shadow-inner border-b border-indigo-900">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-400 text-slate-900 uppercase">
+        <i class="fa-solid fa-shield-halved mr-1"></i> Evaluator Quick Access
+      </span>
+      <span>Click any role to auto-sign in:</span>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 font-medium">
+      <button onclick="quickLogin('admin@trustvault.com')" class="px-2.5 py-1 bg-red-600/80 hover:bg-red-600 rounded text-white transition flex items-center gap-1">
+        <i class="fa-solid fa-user-shield"></i> Security Admin
+      </button>
+      <button onclick="quickLogin('owner@trustvault.com')" class="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-600 rounded text-white transition flex items-center gap-1">
+        <i class="fa-solid fa-user-pen"></i> Alice (Owner)
+      </button>
+      <button onclick="quickLogin('viewer@trustvault.com')" class="px-2.5 py-1 bg-blue-600/80 hover:bg-blue-600 rounded text-white transition flex items-center gap-1">
+        <i class="fa-solid fa-user-check"></i> Bob (Authorized Viewer)
+      </button>
+      <button onclick="quickLogin('outsider@trustvault.com')" class="px-2.5 py-1 bg-purple-600/80 hover:bg-purple-600 rounded text-white transition flex items-center gap-1">
+        <i class="fa-solid fa-user-xmark"></i> Charlie (Unauthorized Outsider)
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN NAVIGATION -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-800 flex items-center justify-center text-white shadow-md">
+          <i class="fa-solid fa-vault text-xl"></i>
+        </div>
+        <div>
+          <span class="text-xl font-bold tracking-tight text-slate-900">Trust<span class="text-indigo-600">Vault</span></span>
+          <span class="text-[10px] ml-1.5 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">RISE 2026</span>
+        </div>
+      </div>
+
+      <div id="nav-user-section" class="flex items-center gap-4">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+    <!-- NOTIFICATION ALERT BOX -->
+    <div id="alert-box" class="hidden mb-6 p-4 rounded-xl border flex items-center justify-between gap-3 shadow-sm transition-all duration-300">
+      <div class="flex items-center gap-3">
+        <i id="alert-icon" class="text-xl"></i>
+        <span id="alert-message" class="text-sm font-medium"></span>
+      </div>
+      <button onclick="hideAlert()" class="text-slate-400 hover:text-slate-600">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- TABS BAR (VISIBLE WHEN SIGNED IN) -->
+    <div id="app-tabs" class="hidden mb-8 border-b border-slate-200 flex items-center gap-6 text-sm font-semibold text-slate-600">
+      <button onclick="switchTab('documents')" id="tab-btn-documents" class="pb-3 border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2">
+        <i class="fa-solid fa-folder-open"></i> Vault Documents
+      </button>
+      <button onclick="switchTab('upload')" id="tab-btn-upload" class="pb-3 border-b-2 border-transparent hover:text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-cloud-arrow-up"></i> Upload Document
+      </button>
+      <button onclick="switchTab('audit')" id="tab-btn-audit" class="hidden pb-3 border-b-2 border-transparent hover:text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-clock-rotate-left"></i> Global Audit Trail
+        <span class="px-1.5 py-0.2 rounded text-[10px] bg-red-100 text-red-700">Admin</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: DOCUMENTS VAULT -->
+    <section id="view-documents" class="space-y-6">
+      <!-- Search & Filter Controls -->
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div class="relative flex-1 w-full">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+          <input type="text" id="filter-search" oninput="loadDocuments()" placeholder="Search documents by title or file name..." class="w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <select id="filter-category" onchange="loadDocuments()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">All Categories</option>
+            <option value="Financial">Financial</option>
+            <option value="Legal">Legal & Contracts</option>
+            <option value="Engineering">Engineering</option>
+            <option value="General">General</option>
+          </select>
+          <button onclick="loadDocuments()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-2">
+            <i class="fa-solid fa-rotate-right"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Document List Grid / Table -->
+      <div id="documents-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB 2: UPLOAD DOCUMENT -->
+    <section id="view-upload" class="hidden max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="mb-6">
+        <h2 class="text-xl font-bold text-slate-900">Upload Secure Document</h2>
+        <p class="text-xs text-slate-500 mt-1">Files are renamed to cryptographic UUIDs and stored outside public web access.</p>
+      </div>
+
+      <form id="upload-form" onsubmit="handleUpload(event)" class="space-y-5">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Document Title *</label>
+          <input type="text" id="upload-title" required placeholder="e.g. Q3 Audited Balance Sheet 2026" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Category</label>
+          <select id="upload-category" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <option value="Financial">Financial</option>
+            <option value="Legal">Legal & Contracts</option>
+            <option value="Engineering">Engineering</option>
+            <option value="General">General</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Select File *</label>
+          <div class="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-6 text-center cursor-pointer bg-slate-50 transition" onclick="document.getElementById('upload-file').click()">
+            <i class="fa-solid fa-cloud-arrow-up text-3xl text-indigo-500 mb-2"></i>
+            <p id="file-label" class="text-sm font-medium text-slate-700">Click to browse or drag file here</p>
+            <p class="text-xs text-slate-400 mt-1">Allowed: PDF, DOCX, TXT, PNG, JPG, CSV, XLSX (Max 10MB)</p>
+          </div>
+          <input type="file" id="upload-file" required onchange="handleFileSelected(event)" class="hidden">
+        </div>
+
+        <button type="submit" id="btn-submit-upload" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-lock"></i> Encrypt & Store in Vault
+        </button>
+      </form>
+    </section>
+
+    <!-- TAB 3: GLOBAL AUDIT TRAIL (ADMIN ONLY) -->
+    <section id="view-audit" class="hidden space-y-6">
+      <!-- Cryptographic Proof Card -->
+      <div class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-6 rounded-2xl shadow-md border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <h3 class="text-lg font-bold">Tamper-Evident SHA-256 Audit Blockchain</h3>
+          </div>
+          <p class="text-xs text-slate-300 mt-1 max-w-xl">
+            Every action and denied attempt is cryptographically linked to the previous log. Any modification or deletion of a past record immediately breaks the hash chain.
+          </p>
+        </div>
+        <button onclick="verifyAuditIntegrity()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs rounded-xl transition shadow flex items-center gap-2">
+          <i class="fa-solid fa-certificate"></i> Verify Cryptographic Integrity
+        </button>
+      </div>
+
+      <!-- Audit Filter -->
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-3">
+        <select id="audit-filter-status" onchange="loadAuditLogs()" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white">
+          <option value="">All Statuses (SUCCESS & DENIED)</option>
+          <option value="SUCCESS">SUCCESS only</option>
+          <option value="DENIED">DENIED Only (Alerts / Attacks)</option>
+        </select>
+        <button onclick="loadAuditLogs()" class="text-xs px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition flex items-center gap-1">
+          <i class="fa-solid fa-rotate-right"></i> Refresh Logs
+        </button>
+      </div>
+
+      <!-- Audit Table -->
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase tracking-wider font-semibold">
+                <th class="py-3 px-4"># ID</th>
+                <th class="py-3 px-4">Timestamp</th>
+                <th class="py-3 px-4">Actor</th>
+                <th class="py-3 px-4">Action</th>
+                <th class="py-3 px-4">Resource</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4">Details</th>
+                <th class="py-3 px-4">Hash Verification</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body" class="divide-y divide-slate-100">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: MANAGE ACCESS / PERMISSIONS (OWNER) -->
+  <div id="modal-permissions" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in duration-200">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Manage Access</h3>
+          <p id="perm-doc-title" class="text-xs text-slate-500 font-medium truncate max-w-xs"></p>
+        </div>
+        <button onclick="closeModal('modal-permissions')" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Add New Grant -->
+      <div class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Grant Access to Named User</span>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <select id="grant-user-select" class="flex-1 text-xs border border-slate-200 rounded-lg px-2.5 py-2 bg-white focus:ring-1 focus:ring-indigo-500">
+            <!-- Injected via JS -->
+          </select>
+          <select id="grant-level-select" class="text-xs border border-slate-200 rounded-lg px-2.5 py-2 bg-white focus:ring-1 focus:ring-indigo-500">
+            <option value="READ">READ (View & Download)</option>
+            <option value="EDIT">EDIT (Modify Title/Category)</option>
+          </select>
+          <button onclick="submitGrantPermission()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition">
+            Grant
+          </button>
+        </div>
+      </div>
+
+      <!-- Current Grants List -->
+      <div class="mt-4">
+        <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Active Grants (Immediate Revocation Available)</h4>
+        <div id="active-permissions-list" class="space-y-2 max-h-60 overflow-y-auto">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-100 text-right">
+        <button onclick="closeModal('modal-permissions')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DOCUMENT AUDIT TRAIL -->
+  <div id="modal-doc-audit" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Document Activity Log</h3>
+          <p id="doc-audit-title" class="text-xs text-slate-500"></p>
+        </div>
+        <button onclick="closeModal('modal-doc-audit')" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div id="doc-audit-list" class="mt-4 space-y-3 max-h-96 overflow-y-auto text-xs">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SIGN IN / SIGN UP -->
+  <div id="modal-auth" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200">
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-2xl shadow-lg mb-3">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-900">Sign In to TrustVault</h2>
+        <p class="text-xs text-slate-500 mt-1">Enterprise Grade Secure Document Storage</p>
+      </div>
+
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Email Address</label>
+          <input type="email" id="auth-email" required class="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Password</label>
+          <input type="password" id="auth-password" required class="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-lg shadow transition">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="mt-auto bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+    TrustVault &copy; 2026 Ankita Suneetha &mdash; Snovasys Fresher Challenge 2026. Zero Trust Architecture.
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

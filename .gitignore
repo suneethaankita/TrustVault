@@ -1,0 +1,8 @@
+node_modules/
+npm-debug.log
+.DS_Store
+.env
+storage/vault_files/*
+!storage/vault_files/.gitkeep
+trustvault.db
+trustvault.db-journal
