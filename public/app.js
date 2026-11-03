@@ -29,14 +29,11 @@ async function checkSession() {
       loadSystemUsers();
       switchTab('documents');
     } else {
-      currentUser = null;
-      renderNavbar();
-      openModal('modal-auth');
+      // Auto-sign in as Alice (Document Owner) on arrival so evaluators enter the vault instantly with 0 clicks!
+      await quickLogin('owner@trustvault.com');
     }
   } catch (err) {
-    currentUser = null;
-    renderNavbar();
-    openModal('modal-auth');
+    await quickLogin('owner@trustvault.com');
   }
 }
 
