@@ -846,3 +846,28 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// Explicit window bindings to ensure 100% global accessibility
+window.quickLogin = quickLogin;
+window.switchTab = switchTab;
+window.downloadDoc = downloadDoc;
+window.previewDoc = previewDoc;
+window.deleteDoc = deleteDoc;
+window.openPermissionsModal = openPermissionsModal;
+window.viewDocAudit = viewDocAudit;
+window.verifyAuditIntegrity = verifyAuditIntegrity;
+window.loadDocuments = loadDocuments;
+window.loadAuditLogs = loadAuditLogs;
+window.toggleAdvancedFilters = toggleAdvancedFilters;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.hideAlert = hideAlert;
+window.handleAuthSubmit = handleAuthSubmit;
+window.handleUpload = handleUpload;
+window.handleFileSelected = handleFileSelected;
+window.submitGrantPermission = submitGrantPermission;
+window.revokePermission = revokePermission;
+window.openEditDocModal = openEditDocModal;
+window.submitEditDoc = submitEditDoc;
+window.logout = logout;
+

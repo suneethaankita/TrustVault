@@ -19,20 +19,10 @@ const PORT = process.env.PORT || 3000;
 // CRITICAL: Trust reverse proxy (Render, AWS, Nginx) so HTTPS and client IPs are resolved correctly
 app.set('trust proxy', 1);
 
-// 1. Security Headers
+// 1. Security Headers (HSTS, Anti-Clickjacking, NoSniff, XSS-Protection)
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
-        scriptSrcAttr: ["'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-        imgSrc: ["'self'", "data:"],
-        connectSrc: ["'self'"]
-      }
-    },
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
   })
 );
