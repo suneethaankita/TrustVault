@@ -121,6 +121,31 @@ As required by the marking rubric, multiple entries focus specifically on **auth
 
 ---
 
+### Entry 6 (2026-11-05) — Helmet CSP Directive Blocking Inline Event Handlers (`script-src-attr`)
+- **Prompt:**  
+  *"Add Helmet security headers with Content Security Policy to secure TrustVault against XSS and clickjacking."*
+- **What the AI Produced:**  
+  The AI configured Helmet CSP with:
+  ```javascript
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"]
+      }
+    }
+  })
+  ```
+- **What Was Wrong With It Specifically:**  
+  **Application broke in production browsers with 42 CSP errors.**  
+  In modern Helmet (v7+), the Content Security Policy defaults `script-src-attr: 'none'` unless explicitly overridden. Even though `'unsafe-inline'` was in `scriptSrc`, the browser blocked all `onclick` event handlers on buttons (role switching, file downloads, modals) with the console error:  
+  `Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''`.
+- **What We Did Instead:**  
+  Configured `scriptSrcAttr: ["'unsafe-inline'"]` inside Helmet's CSP directives, allowing button event handlers to execute securely while maintaining strict origin boundaries (`defaultSrc: ["'self'"]`).
+- **Commit Reference:** `commit (fix(security): configure helmet scriptSrcAttr to permit UI event handlers while maintaining CSP origin bounds)`
+
+---
+
 ## Reusable System Prompt Used Across the Week
 Whenever prompting AI tools during this project, we enforced this standardized context prompt:
 
