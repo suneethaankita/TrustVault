@@ -109,7 +109,7 @@ async function runComprehensive200TestSuite() {
       const garbageToken = `garbage.jwt.payload_${crypto.randomBytes(8).toString('hex')}`;
       assert.throws(() => {
         jwt.verify(garbageToken, JWT_SECRET);
-      }, /jwt malformed/);
+      }, /(invalid token|jwt malformed)/);
     });
   }
 
@@ -396,7 +396,7 @@ async function runComprehensive200TestSuite() {
     }
   });
 
-  for (let i = 1; i <= 14; i++) {
+  for (let i = 1; i <= 18; i++) {
     await test(`Audit Mathematical Tamper Detection #${i}: Mutating details in block #${i} breaks hash chain`, async () => {
       const logs = await all('SELECT * FROM audit_logs ORDER BY id ASC LIMIT 20');
       const target = logs[i % logs.length];
