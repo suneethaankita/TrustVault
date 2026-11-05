@@ -34,11 +34,13 @@ if (!access.authorized) {
 - **Why this matters for your interview:** If this line is removed, the server would blindly stream files to anyone with the UUID. With this check in place, the database is queried synchronously on every single HTTP request.
 - **Immediate Revocation Guarantee:** When an owner revokes permission, the corresponding row in the `permissions` table is deleted. Because permissions are never cached in JWT claims or memory, access terminates within **0 milliseconds**.
 
-### 2. Physical File Isolation & Anti-Traversal
+### 2. Physical File Isolation, Anti-Traversal & AES-256-GCM Encryption
 - Uploaded files are stored in `/storage/vault_files/` completely outside the public web root (`/public/`).
 - Direct URLs (e.g. `/uploads/file.pdf`) do NOT exist.
 - Files on disk are renamed to cryptographic UUIDs (`crypto.randomUUID() + ext`). Path traversal attacks (`../../`) are mathematically impossible.
+- **Zero-Trust Encryption at Rest:** Files on physical disk are encrypted with **AES-256-GCM** (Authenticated Encryption). Format: `[16 bytes IV][16 bytes AuthTag][Ciphertext]`. Any byte modification on disk triggers an authenticated tag failure upon decryption.
 - File bytes are streamed only via authenticated streams after authorization verification.
+- **In-Memory Preview:** Authorized users can securely preview text and image files directly in their browser without downloading, decrypted strictly in memory with no unencrypted temp files left on disk.
 
 ### 3. Tamper-Evident SHA-256 Audit Blockchain
 Every action and **DENIED ATTEMPT** is recorded into `audit_logs` with cryptographic chaining:

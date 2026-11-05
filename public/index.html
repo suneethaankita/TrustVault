@@ -90,22 +90,43 @@
     <!-- TAB 1: DOCUMENTS VAULT -->
     <section id="view-documents" class="space-y-6">
       <!-- Search & Filter Controls -->
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div class="relative flex-1 w-full">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-          <input type="text" id="filter-search" oninput="loadDocuments()" placeholder="Search documents by title or file name..." class="w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div class="relative flex-1 w-full">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+            <input type="text" id="filter-search" oninput="loadDocuments()" placeholder="Search documents by title or file name..." class="w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <select id="filter-category" onchange="loadDocuments()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">All Categories</option>
+              <option value="Financial">Financial</option>
+              <option value="Legal">Legal & Contracts</option>
+              <option value="Engineering">Engineering</option>
+              <option value="General">General</option>
+            </select>
+            <button onclick="toggleAdvancedFilters()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-1.5">
+              <i class="fa-solid fa-sliders"></i> Filters
+            </button>
+            <button onclick="loadDocuments()" class="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold transition flex items-center gap-2">
+              <i class="fa-solid fa-rotate-right"></i> Refresh
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <select id="filter-category" onchange="loadDocuments()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <option value="">All Categories</option>
-            <option value="Financial">Financial</option>
-            <option value="Legal">Legal & Contracts</option>
-            <option value="Engineering">Engineering</option>
-            <option value="General">General</option>
-          </select>
-          <button onclick="loadDocuments()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-2">
-            <i class="fa-solid fa-rotate-right"></i> Refresh
-          </button>
+
+        <!-- Advanced Filter Row (Date Range & Owner Email) -->
+        <div id="advanced-filters" class="hidden pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">Filter by Owner Email</label>
+            <input type="text" id="filter-owner" oninput="loadDocuments()" placeholder="e.g. owner@trustvault.com" class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">From Date</label>
+            <input type="date" id="filter-start-date" onchange="loadDocuments()" class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">To Date</label>
+            <input type="date" id="filter-end-date" onchange="loadDocuments()" class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          </div>
         </div>
       </div>
 
@@ -272,6 +293,73 @@
       <div id="doc-audit-list" class="mt-4 space-y-3 max-h-96 overflow-y-auto text-xs">
         <!-- Injected via JS -->
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DOCUMENT PREVIEW -->
+  <div id="modal-preview" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-eye text-indigo-600"></i> Secure Document Preview
+          </h3>
+          <p id="preview-filename" class="text-xs text-slate-500 font-mono"></p>
+        </div>
+        <button onclick="closeModal('modal-preview')" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div id="preview-content-box" class="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 max-h-96 overflow-y-auto text-xs font-mono whitespace-pre-wrap">
+        <!-- Injected via JS -->
+      </div>
+
+      <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+        <span class="text-[11px] text-slate-400">Decrypted in-memory on demand; no unencrypted temporary file on disk.</span>
+        <button onclick="closeModal('modal-preview')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT DOCUMENT METADATA -->
+  <div id="modal-edit-doc" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-indigo-600"></i> Edit Document Details
+        </h3>
+        <button onclick="closeModal('modal-edit-doc')" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="edit-doc-form" onsubmit="submitEditDoc(event)" class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Document Title *</label>
+          <input type="text" id="edit-doc-title" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Category</label>
+          <select id="edit-doc-category" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <option value="Financial">Financial</option>
+            <option value="Legal">Legal & Contracts</option>
+            <option value="Engineering">Engineering</option>
+            <option value="General">General</option>
+          </select>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-edit-doc')" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition">
+            Save Changes
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

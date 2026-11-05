@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { run, get, all, logAuditEvent } = require('../database');
+const { encryptBuffer, decryptBuffer } = require('../utils/cryptoVault');
 
 const STORAGE_DIR = path.join(__dirname, '..', 'storage', 'vault_files');
 
@@ -50,6 +51,11 @@ async function uploadDocument(req, res) {
     const docId = crypto.randomUUID();
     const now = new Date().toISOString();
     const storedFilename = path.basename(req.file.path);
+
+    // Encrypt file on disk with AES-256-GCM before database registration
+    const plaintext = fs.readFileSync(req.file.path);
+    const encrypted = encryptBuffer(plaintext);
+    fs.writeFileSync(req.file.path, encrypted);
 
     await run(
       `INSERT INTO documents (
@@ -249,17 +255,97 @@ async function downloadDocument(req, res) {
     });
 
     // Stream download with sanitized filename header
-    const stats = fs.statSync(filePath);
+    const rawStoredBytes = fs.readFileSync(filePath);
+    const decryptedBytes = decryptBuffer(rawStoredBytes);
+
     res.setHeader('Content-Type', access.doc.mime_type || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(access.doc.original_filename)}"`);
-    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Content-Length', decryptedBytes.length);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
+    res.send(decryptedBytes);
   } catch (err) {
     console.error('Download error:', err);
     res.status(500).json({ error: 'Error streaming file.' });
+  }
+}
+
+// 4b. Preview Document (In-browser preview for supported files)
+async function previewDocument(req, res) {
+  try {
+    const docId = req.params.id;
+    const access = await evaluateAccess(docId, req.user.id);
+
+    if (!access.authorized) {
+      await logAuditEvent({
+        actor_id: req.user.id,
+        actor_name: req.user.name,
+        actor_email: req.user.email,
+        action: 'UNAUTHORIZED_PREVIEW_ATTEMPT',
+        resource_type: 'DOCUMENT',
+        resource_id: docId,
+        resource_name: access.doc ? access.doc.title : 'UNKNOWN',
+        status: 'DENIED',
+        ip_address: req.ip,
+        user_agent: req.headers['user-agent'],
+        details: `Rejected preview attempt by ${req.user.email}`
+      });
+
+      return res.status(access.reason === 'NOT_FOUND' ? 404 : 403).json({
+        error: 'Access Denied: You do not have authorization to preview this file.'
+      });
+    }
+
+    const filePath = path.join(STORAGE_DIR, access.doc.stored_filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found on storage disk.' });
+    }
+
+    const rawStoredBytes = fs.readFileSync(filePath);
+    const decryptedBytes = decryptBuffer(rawStoredBytes);
+
+    await logAuditEvent({
+      actor_id: req.user.id,
+      actor_name: req.user.name,
+      actor_email: req.user.email,
+      action: 'DOCUMENT_PREVIEW',
+      resource_type: 'DOCUMENT',
+      resource_id: docId,
+      resource_name: access.doc.title,
+      status: 'SUCCESS',
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent'],
+      details: `Authorized secure preview of '${access.doc.original_filename}'`
+    });
+
+    const mime = access.doc.mime_type;
+    if (mime === 'text/plain' || mime === 'text/csv') {
+      return res.json({
+        previewType: 'text',
+        title: access.doc.title,
+        filename: access.doc.original_filename,
+        mimeType: mime,
+        content: decryptedBytes.toString('utf8')
+      });
+    } else if (mime === 'image/png' || mime === 'image/jpeg') {
+      return res.json({
+        previewType: 'image',
+        title: access.doc.title,
+        filename: access.doc.original_filename,
+        mimeType: mime,
+        dataUrl: `data:${mime};base64,${decryptedBytes.toString('base64')}`
+      });
+    } else {
+      return res.json({
+        previewType: 'unsupported',
+        title: access.doc.title,
+        filename: access.doc.original_filename,
+        mimeType: mime,
+        message: 'Direct inline modal preview is available for text, CSV, and image files. For PDF and Office documents, please use the secure download button.'
+      });
+    }
+  } catch (err) {
+    console.error('Preview error:', err);
+    res.status(500).json({ error: 'Failed to preview document.' });
   }
 }
 
@@ -525,6 +611,7 @@ module.exports = {
   listDocuments,
   getDocument,
   downloadDocument,
+  previewDocument,
   updateDocument,
   deleteDocument,
   grantPermission,

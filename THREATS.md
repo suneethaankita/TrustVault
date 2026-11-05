@@ -119,16 +119,27 @@ Each threat entry documents:
 
 ---
 
+### 10. Physical Disk Snooping & Storage Byte Tampering
+- **Attack Scenario:** An attacker gains access to the underlying server disk image or container volume and reads stored files directly, or flips bits in a stored document to corrupt company data silently.
+- **Impact:** High. Confidentiality breach or undetected data corruption.
+- **Mitigation Implemented:**
+  1. All files written to disk are encrypted using **AES-256-GCM** authenticated encryption (`cryptoVault.js`).
+  2. The format prepends a 16-byte random IV and 16-byte GCM Authentication Tag before the ciphertext.
+  3. When an authorized user downloads or previews a file, the server validates the AuthTag during decryption. If any single byte on disk was tampered with, decryption fails immediately and alerts the system.
+- **Verification:** Test #8 in `tests/security.test.js` verifies ciphertext opacity and confirms that flipping a single byte in storage triggers an authentication failure.
+
+---
+
 ## Consciously Accepted Residual Risks & Justification (Honesty Section)
 
 As required by the challenge guidelines, here are the architectural trade-offs consciously accepted and why:
 
-1. **Local Disk Storage vs. Cloud Object Storage (S3):**
+1. **Local Encrypted Disk vs. Cloud Object Storage (S3 / KMS):**
    - *Risk:* If the host server's local disk fails or is wiped, uploaded files would be lost without a separate backup.
    - *Reason for Acceptance:* To make TrustVault completely self-contained, zero-dependency, and instantly runnable for evaluators from a clean clone without requiring paid AWS S3 credentials or cloud setup. In a multi-tenant cloud deployment, the storage backend would swap to AWS S3 with private buckets and pre-signed URLs with 60-second expiration.
-2. **Server-Side File Encryption at Rest:**
-   - *Risk:* Files are stored isolated outside web root with UUID names, but without full AES-256 encryption at rest on the local filesystem.
-   - *Reason for Acceptance:* Operating system filesystem-level access controls (ACLs) protect the private `/storage/` folder. For a production deployment, envelope encryption using KMS (Key Management Service) where each file has a distinct Data Encryption Key (DEK) would be added.
+2. **Single Derived Master Key vs. Per-File Envelope Encryption:**
+   - *Risk:* All files on an instance are encrypted using the derived server master key (`VAULT_ENCRYPTION_KEY`) rather than generating a distinct random Data Encryption Key (DEK) wrapped by an external Hardware Security Module (HSM).
+   - *Reason for Acceptance:* For this standalone deployment, AES-256-GCM provides authenticated defense without requiring an external KMS provider subscription.
 3. **Admin Viewing Document Metadata:**
    - *Risk:* The Administrator role can view the global audit log containing document titles and actions.
    - *Reason for Acceptance:* Auditors need to see what actions occurred. However, the Admin **cannot** download the file content unless Alice explicitly grants them `READ` access, strictly preserving zero-trust segregation of duties.

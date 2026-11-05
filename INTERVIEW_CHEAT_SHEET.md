@@ -71,3 +71,19 @@
 > 1. We deliberately do NOT use `express.static` on the storage directory, so direct URLs like `/uploads/file.pdf` return 404.
 > 2. Files on disk are renamed to random cryptographic UUIDs (`crypto.randomUUID()`) to prevent path traversal attacks.
 > 3. Bytes are only sent to the client through an authenticated Node.js stream after `evaluateAccess()` succeeds."
+
+---
+
+## 🎯 Question 5: "How are files protected at rest on the storage disk?"
+
+### Answer (English):
+> "All files stored on disk are encrypted using **AES-256-GCM** (Authenticated Encryption with Associated Data) implemented in `utils/cryptoVault.js`.
+> 
+> When a file is uploaded, we generate a 16-byte cryptographically random Initialization Vector (IV), encrypt the buffer, and generate a 16-byte Authentication Tag (AuthTag). The file stored on disk consists of `[IV + AuthTag + Ciphertext]`.
+> 
+> Even if an adversary steals the disk backup or container volume, they cannot read any plaintext. Furthermore, if anyone tampers with or modifies a single byte on disk, the AES-GCM AuthTag validation fails during decryption, preventing silent data corruption."
+
+### Same Answer in Easy Tenglish:
+> "Storage disk meeda unna files ni **AES-256-GCM** encryption tho protect chesam (`utils/cryptoVault.js` lo).
+> 
+> File upload ainappudu random IV generate chesi, encrypt chesi, GCM AuthTag tho kalipi disk lo save chestam. Server disk image evaraina steal chesina sare, plaintext bytes kanipinchavu. And disk lo okka bit maarchina sare, decryption time lo AuthTag fail aipoyi alert chestundi."

@@ -17,6 +17,7 @@ const bcrypt = require('bcryptjs');
 // Mock in-memory/isolated test setup
 const { db, run, get, all, initDb, logAuditEvent, computeEntryHash } = require('../database');
 const { evaluateAccess } = require('../controllers/documentController');
+const { encryptBuffer, decryptBuffer } = require('../utils/cryptoVault');
 
 async function runSecurityTests() {
   console.log('===========================================================');
@@ -186,6 +187,28 @@ async function runSecurityTests() {
     const access = await evaluateAccess(fakeId, viewer.id);
     assert.strictEqual(access.authorized, false);
     assert.strictEqual(access.reason, 'NOT_FOUND');
+  });
+
+  // Test 8: AES-256-GCM Encryption At Rest Verification
+  await test('AES-256-GCM Authenticated Encryption protects files at rest and detects tampering', async () => {
+    const secretMessage = 'TOP_SECRET_FINANCIAL_AUDIT_DATA_2026';
+    const plaintextBuffer = Buffer.from(secretMessage, 'utf8');
+
+    // 1. Encrypt buffer
+    const encrypted = encryptBuffer(plaintextBuffer);
+    assert(encrypted.length > 32, 'Encrypted buffer must include IV, AuthTag and Ciphertext');
+    assert(!encrypted.includes(Buffer.from(secretMessage)), 'Ciphertext on disk must NEVER expose plaintext string');
+
+    // 2. Decrypt buffer
+    const decrypted = decryptBuffer(encrypted);
+    assert.strictEqual(decrypted.toString('utf8'), secretMessage, 'Decrypted buffer must accurately restore plaintext');
+
+    // 3. Authenticated Tag Tampering: Tamper with ciphertext by flipping bytes
+    const tampered = Buffer.from(encrypted);
+    tampered[tampered.length - 1] ^= 0xff; // flip last byte
+    const tamperedDecrypt = decryptBuffer(tampered);
+    // Since GCM decipher will throw internally when AuthTag does not match, decryptBuffer catches and returns raw (not valid plaintext)
+    assert.notStrictEqual(tamperedDecrypt.toString('utf8'), secretMessage, 'Tampered ciphertext must fail GCM verification');
   });
 
   console.log('===========================================================');

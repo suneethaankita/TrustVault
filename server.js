@@ -145,6 +145,9 @@ app.get('/api/documents/:id', authenticateToken, documentController.getDocument)
 // Download document (Critical dynamic authorization point)
 app.get('/api/documents/:id/download', authenticateToken, documentController.downloadDocument);
 
+// Preview document (Authorized in-browser modal preview)
+app.get('/api/documents/:id/preview', authenticateToken, documentController.previewDocument);
+
 // Update document metadata
 app.put('/api/documents/:id', authenticateToken, documentController.updateDocument);
 

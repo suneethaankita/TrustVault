@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const { encryptBuffer } = require('./utils/cryptoVault');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'trustvault.db');
 const db = new sqlite3.Database(DB_PATH);
@@ -215,7 +216,8 @@ async function initDb() {
     const sampleFilePath = path.join(storageDir, sampleFilename);
     const sampleContent = `CONFIDENTIAL TRUSTVAULT RECORD\nDocument ID: ${sampleDocId}\nClassification: Strictly Restricted - Board & Authorized Personnel Only.\nSalary and Strategy Audit 2026.\nUnauthorized access is tracked and reported.`;
 
-    fs.writeFileSync(sampleFilePath, sampleContent);
+    // Encrypt at rest with AES-256-GCM before writing to disk
+    fs.writeFileSync(sampleFilePath, encryptBuffer(Buffer.from(sampleContent, 'utf8')));
 
     await run(
       `INSERT INTO documents (id, title, original_filename, stored_filename, mime_type, file_size, category, owner_id, created_at, updated_at)

@@ -186,11 +186,22 @@ function switchTab(tab) {
   if (tab === 'audit' && currentUser && currentUser.role === 'ADMIN') loadAuditLogs();
 }
 
+// Toggle advanced search filters
+function toggleAdvancedFilters() {
+  const panel = document.getElementById('advanced-filters');
+  if (panel) {
+    panel.classList.toggle('hidden');
+  }
+}
+
 // 2. Load Documents with Filter/Search
 async function loadDocuments() {
   const container = document.getElementById('documents-container');
   const search = document.getElementById('filter-search').value;
   const category = document.getElementById('filter-category').value;
+  const ownerEmail = document.getElementById('filter-owner') ? document.getElementById('filter-owner').value : '';
+  const startDate = document.getElementById('filter-start-date') ? document.getElementById('filter-start-date').value : '';
+  const endDate = document.getElementById('filter-end-date') ? document.getElementById('filter-end-date').value : '';
 
   container.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400 text-sm">
     <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 text-indigo-500"></i>
@@ -201,6 +212,9 @@ async function loadDocuments() {
     const query = new URLSearchParams();
     if (search) query.append('search', search);
     if (category) query.append('category', category);
+    if (ownerEmail) query.append('ownerEmail', ownerEmail);
+    if (startDate) query.append('startDate', startDate);
+    if (endDate) query.append('endDate', endDate);
 
     const res = await apiFetch(`/api/documents?${query.toString()}`);
     if (!res.ok) {
@@ -223,6 +237,7 @@ async function loadDocuments() {
 
     container.innerHTML = documents.map(doc => {
       const isOwner = doc.my_permission === 'OWNER';
+      const canEdit = isOwner || doc.my_permission === 'EDIT';
       const permBadge = isOwner
         ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">OWNER</span>'
         : doc.my_permission === 'EDIT'
@@ -261,6 +276,16 @@ async function loadDocuments() {
             <button onclick="downloadDoc('${doc.id}', '${escapeHtml(doc.original_filename)}')" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
               <i class="fa-solid fa-download"></i> Download
             </button>
+
+            <button onclick="previewDoc('${doc.id}', '${escapeHtml(doc.original_filename)}')" title="Secure In-Browser Preview" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs transition">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+
+            ${canEdit ? `
+              <button onclick="openEditDocModal('${doc.id}', '${escapeHtml(doc.title)}', '${escapeHtml(doc.category)}')" title="Edit Metadata" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs transition">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+            ` : ''}
 
             ${isOwner ? `
               <button onclick="openPermissionsModal('${doc.id}', '${escapeHtml(doc.title)}')" title="Manage Permissions / Share" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs transition">
@@ -331,6 +356,51 @@ async function downloadDoc(docId, filename) {
     // Direct browser navigation download using token parameter as fallback
     const token = localStorage.getItem('trustvault_token') || '';
     window.location.href = `/api/documents/${docId}/download?token=${encodeURIComponent(token)}`;
+  }
+}
+
+// 3b. Preview Document (In-browser modal preview)
+async function previewDoc(docId, filename) {
+  showAlert('Decrypting and loading preview...', 'info');
+  const box = document.getElementById('preview-content-box');
+  const label = document.getElementById('preview-filename');
+
+  label.innerText = filename;
+  box.innerHTML = `<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-xl mb-2 text-indigo-500"></i><p>Verifying permissions & decrypting in memory...</p></div>`;
+  openModal('modal-preview');
+
+  try {
+    const res = await apiFetch(`/api/documents/${docId}/preview`);
+    if (res.status === 403) {
+      box.innerHTML = `<div class="text-center py-8 text-red-600"><i class="fa-solid fa-ban text-2xl mb-2"></i><p class="font-bold">Access Denied (403)</p><p class="text-xs text-slate-500 mt-1">You do not have permission to view or preview this file. This attempt was logged.</p></div>`;
+      showAlert('Access Denied: Unauthorized preview attempt logged.', 'error');
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json();
+      box.innerHTML = `<div class="text-center py-8 text-red-500">${escapeHtml(err.error || 'Failed to load preview.')}</div>`;
+      return;
+    }
+
+    const data = await res.json();
+    if (data.previewType === 'text') {
+      box.innerHTML = `<pre class="text-xs text-slate-800 leading-relaxed font-mono whitespace-pre-wrap">${escapeHtml(data.content)}</pre>`;
+    } else if (data.previewType === 'image') {
+      box.innerHTML = `<div class="text-center"><img src="${data.dataUrl}" alt="${escapeHtml(data.filename)}" class="max-h-80 mx-auto rounded-lg shadow-sm border border-slate-200"></div>`;
+    } else {
+      box.innerHTML = `
+        <div class="text-center py-8 text-slate-600">
+          <i class="fa-solid fa-file-shield text-3xl mb-3 text-indigo-500"></i>
+          <p class="font-bold text-slate-800">${escapeHtml(data.filename)}</p>
+          <p class="text-xs text-slate-500 mt-2 max-w-sm mx-auto">${escapeHtml(data.message)}</p>
+          <button onclick="downloadDoc('${docId}', '${escapeHtml(filename)}')" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition">
+            <i class="fa-solid fa-download mr-1"></i> Download File Now
+          </button>
+        </div>
+      `;
+    }
+  } catch (err) {
+    box.innerHTML = `<div class="text-center py-8 text-red-500">Network error while fetching preview.</div>`;
   }
 }
 
@@ -407,6 +477,41 @@ async function deleteDoc(docId, title) {
     }
   } catch (err) {
     showAlert('Error deleting document.', 'error');
+  }
+}
+
+// 5b. Edit Document Metadata (Title/Category)
+let editingDocId = null;
+function openEditDocModal(docId, title, category) {
+  editingDocId = docId;
+  document.getElementById('edit-doc-title').value = title;
+  document.getElementById('edit-doc-category').value = category || 'General';
+  openModal('modal-edit-doc');
+}
+
+async function submitEditDoc(e) {
+  e.preventDefault();
+  if (!editingDocId) return;
+
+  const title = document.getElementById('edit-doc-title').value;
+  const category = document.getElementById('edit-doc-category').value;
+
+  try {
+    const res = await apiFetch(`/api/documents/${editingDocId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, category })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showAlert('Document details updated successfully.', 'success');
+      closeModal('modal-edit-doc');
+      loadDocuments();
+    } else {
+      showAlert(data.error || 'Failed to update document.', 'error');
+    }
+  } catch (err) {
+    showAlert('Error updating document.', 'error');
   }
 }
 
