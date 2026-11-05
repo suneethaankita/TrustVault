@@ -56,8 +56,20 @@ async function quickLogin(email) {
       closeModal('modal-auth');
       renderNavbar();
       loadSystemUsers();
-      showAlert(`Signed in as ${data.user.name} (${data.user.role})`, 'success');
-      switchTab('documents');
+
+      if (data.user.role === 'ADMIN') {
+        showAlert(`Signed in as Security Admin. Switched to Global Audit Trail & Blockchain Verification.`, 'success');
+        switchTab('audit');
+      } else if (data.user.email === 'outsider@trustvault.com') {
+        showAlert(`Signed in as Charlie (Outsider) — Notice all documents are hidden under Zero-Trust!`, 'info');
+        switchTab('documents');
+      } else if (data.user.email === 'viewer@trustvault.com') {
+        showAlert(`Signed in as Bob (Viewer) — Granted READ permission to Alice's document.`, 'success');
+        switchTab('documents');
+      } else {
+        showAlert(`Signed in as Alice (Document Owner) — Full ownership controls active.`, 'success');
+        switchTab('documents');
+      }
     } else {
       showAlert(data.error || 'Failed to login', 'error');
     }
@@ -159,6 +171,26 @@ function renderNavbar() {
       </button>
     </div>
   `;
+
+  // Highlight currently active quick login button in top bar
+  const quickButtons = {
+    'admin@trustvault.com': 'btn-quick-admin',
+    'owner@trustvault.com': 'btn-quick-owner',
+    'viewer@trustvault.com': 'btn-quick-viewer',
+    'outsider@trustvault.com': 'btn-quick-outsider'
+  };
+
+  Object.entries(quickButtons).forEach(([btnEmail, btnId]) => {
+    const el = document.getElementById(btnId);
+    if (el) {
+      if (currentUser && currentUser.email === btnEmail) {
+        el.className = el.className.replace(/ring-[^\s]+/g, '').replace(/shadow-[^\s]+/g, '');
+        el.classList.add('ring-2', 'ring-amber-300', 'shadow-lg', 'scale-105');
+      } else {
+        el.classList.remove('ring-2', 'ring-amber-300', 'shadow-lg', 'scale-105');
+      }
+    }
+  });
 }
 
 // Switch Tabs

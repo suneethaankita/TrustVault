@@ -25,16 +25,16 @@
       <span>Click any role to auto-sign in:</span>
     </div>
     <div class="flex flex-wrap items-center gap-2 font-medium">
-      <button onclick="quickLogin('admin@trustvault.com')" class="px-2.5 py-1 bg-red-600/80 hover:bg-red-600 rounded text-white transition flex items-center gap-1">
+      <button id="btn-quick-admin" onclick="quickLogin('admin@trustvault.com')" class="px-2.5 py-1 bg-red-600/80 hover:bg-red-600 rounded text-white transition flex items-center gap-1">
         <i class="fa-solid fa-user-shield"></i> Security Admin
       </button>
-      <button onclick="quickLogin('owner@trustvault.com')" class="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-600 rounded text-white transition flex items-center gap-1">
+      <button id="btn-quick-owner" onclick="quickLogin('owner@trustvault.com')" class="px-2.5 py-1 bg-amber-600/80 hover:bg-amber-600 rounded text-white transition flex items-center gap-1">
         <i class="fa-solid fa-user-pen"></i> Alice (Owner)
       </button>
-      <button onclick="quickLogin('viewer@trustvault.com')" class="px-2.5 py-1 bg-blue-600/80 hover:bg-blue-600 rounded text-white transition flex items-center gap-1">
+      <button id="btn-quick-viewer" onclick="quickLogin('viewer@trustvault.com')" class="px-2.5 py-1 bg-blue-600/80 hover:bg-blue-600 rounded text-white transition flex items-center gap-1">
         <i class="fa-solid fa-user-check"></i> Bob (Authorized Viewer)
       </button>
-      <button onclick="quickLogin('outsider@trustvault.com')" class="px-2.5 py-1 bg-purple-600/80 hover:bg-purple-600 rounded text-white transition flex items-center gap-1">
+      <button id="btn-quick-outsider" onclick="quickLogin('outsider@trustvault.com')" class="px-2.5 py-1 bg-purple-600/80 hover:bg-purple-600 rounded text-white transition flex items-center gap-1">
         <i class="fa-solid fa-user-xmark"></i> Charlie (Unauthorized Outsider)
       </button>
     </div>
